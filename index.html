@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fake Store - TechGeek Shop</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛍️</text></svg>"
+    />
+  </head>
+  <body>
+    <header class="main-header">
+      <h1 class="fade-in">🛒 TechGeek Shop ⚡</h1>
+      <p class="fade-in-delay">Seu destino para gadgets e tecnologia.</p>
+    </header>
+
+    <main class="store-container">
+      <section class="products-section">
+        <form id="add-product-form" class="add-product-form">
+          <h3>Adicionar Novo Produto</h3>
+          <input
+            type="text"
+            id="product-name"
+            placeholder="Nome do Produto"
+            required
+          />
+          <input
+            type="number"
+            id="product-price"
+            placeholder="Preço (ex: 199.50)"
+            step="0.01"
+            required
+          />
+          <input
+            type="number"
+            id="product-stock"
+            placeholder="Estoque Inicial"
+            required
+          />
+
+          <label for="product-image-file" class="file-label"
+            >Escolher Imagem do Produto</label
+          >
+          <input
+            type="file"
+            id="product-image-file"
+            accept="image/*"
+            required
+          />
+
+          <button type="submit" class="add-button">Cadastrar Produto</button>
+        </form>
+
+        <h2 class="section-title">Catálogo de Produtos</h2>
+        <div id="products-list" class="products-list"></div>
+      </section>
+
+      <aside class="cart-section">
+        <h2>Carrinho (<span id="cart-count">0</span>)</h2>
+
+        <div id="cart-items" class="cart-items">
+          <p id="empty-cart-message">Seu carrinho está vazio.</p>
+        </div>
+
+        <div class="cart-summary">
+          <div class="summary-line">
+            <span>Subtotal:</span>
+            <span id="cart-subtotal">R$ 0,00</span>
+          </div>
+          <div class="summary-line shipping">
+            <span>Frete:</span>
+            <span id="cart-shipping">R$ 20,00</span>
+          </div>
+          <div class="summary-line total">
+            <strong>Total:</strong>
+            <strong id="cart-total">R$ 20,00</strong>
+          </div>
+
+          <button class="checkout-button" disabled>Finalizar Compra</button>
+        </div>
+      </aside>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>

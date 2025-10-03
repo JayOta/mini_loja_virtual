@@ -116,8 +116,8 @@ function renderProducts() {
             <button class="remove-product-btn" data-id="${
               product.id
             }">×</button>
-            <img src="${product.imagem_url}" alt="${product.nome}">
-            <div class="card-info">
+        <img src="${product.imagem_url}" alt="${product.nome}">
+        <div class="card-info">
                 <h3>${product.nome}</h3>
                 <p class="product-price">${formatCurrency(
                   parseFloat(product.preco)

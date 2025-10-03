@@ -1,57 +1,15 @@
-// Dados Fictícios de Produtos (Fake Store)
-// NOTA: Os produtos iniciais usam URLs de imagens de exemplo (picsum.photos).
-// Produtos cadastrados pelo usuário usarão URLs temporárias do navegador.
-let products = [
-  {
-    id: 1,
-    name: "Mouse Gamer Ultra",
-    price: 159.9,
-    image: "https://picsum.photos/400/300?random=1",
-    stock: 10,
-  },
-  {
-    id: 2,
-    name: "Teclado Mecânico RGB",
-    price: 349.0,
-    image: "https://picsum.photos/400/300?random=2",
-    stock: 5,
-  },
-  {
-    id: 3,
-    name: "Monitor 27' 4K Curvo",
-    price: 2999.99,
-    image: "https://picsum.photos/400/300?random=3",
-    stock: 3,
-  },
-  {
-    id: 4,
-    name: "Webcam Streaming HD",
-    price: 199.5,
-    image: "https://picsum.photos/400/300?random=4",
-    stock: 12,
-  },
-  {
-    id: 5,
-    name: "Fone Bluetooth Cancelamento",
-    price: 499.0,
-    image: "https://picsum.photos/400/300?random=5",
-    stock: 8,
-  },
-  {
-    id: 6,
-    name: "Placa Gráfica XGT 4090",
-    price: 8999.0,
-    image: "https://picsum.photos/400/300?random=6",
-    stock: 1,
-  },
-];
-
-// Estado global do carrinho
+// Remove os dados fictícios locais, agora usaremos a API
+let products = [];
 let cart = [];
 const SHIPPING_COST = 20.0;
-let nextProductId = products.length + 1;
 
-// Elementos DOM
+// URL da sua API (ajuste se necessário, dependendo da sua porta/ambiente)
+const BASE_URL = "./api/";
+
+const API_URL = BASE_URL + "produtos.php";
+const VENDAS_API_URL = BASE_URL + "vendas.php";
+
+// Elementos DOM (mantidos)
 const productsListEl = document.getElementById("products-list");
 const cartItemsEl = document.getElementById("cart-items");
 const cartCountEl = document.getElementById("cart-count");
@@ -60,6 +18,74 @@ const cartTotalEl = document.getElementById("cart-total");
 const checkoutButton = document.querySelector(".checkout-button");
 const emptyCartMessage = document.getElementById("empty-cart-message");
 const addProductForm = document.getElementById("add-product-form");
+let nextProductId = 1; // Não é mais estritamente necessário, mas mantemos para o formulário
+
+// --- API FUNCTIONS (Comunicação com PHP) ---
+
+// R: READ (Ler Produtos)
+async function fetchProducts() {
+  try {
+    const response = await fetch(API_URL);
+    const result = await response.json();
+
+    if (result.success) {
+      products = result.data; // Atualiza o array global com dados do BD
+      renderProducts();
+    } else {
+      console.error("Erro ao buscar produtos:", result.message);
+      alert(
+        "Erro ao carregar o catálogo. Verifique a conexão com o banco de dados."
+      );
+    }
+  } catch (error) {
+    console.error("Erro na requisição GET:", error);
+    alert("Falha na comunicação com o servidor PHP.");
+  }
+}
+
+// C: CREATE (Criar Produto)
+async function apiCreateProduct(formData) {
+  try {
+    // ATENÇÃO: Ao usar FormData, o cabeçalho 'Content-Type': 'application/json' NÃO DEVE ser enviado.
+    const response = await fetch(API_URL, {
+      method: "POST",
+      // O navegador configura o cabeçalho 'Content-Type: multipart/form-data' automaticamente com FormData.
+      body: formData,
+    });
+    const result = await response.json();
+
+    if (result.success) {
+      alert(`Produto cadastrado com sucesso!`);
+      fetchProducts(); // Recarrega a lista
+      addProductForm.reset();
+    } else {
+      alert(`Erro ao cadastrar produto: ${result.message}`);
+    }
+  } catch (error) {
+    console.error("Erro na requisição POST:", error);
+    alert("Falha na comunicação com o servidor ao cadastrar.");
+  }
+}
+
+// D: DELETE (Deletar Produto)
+async function apiDeleteProduct(id) {
+  try {
+    const response = await fetch(`${API_URL}?id=${id}`, {
+      method: "DELETE",
+    });
+    const result = await response.json();
+
+    if (result.success) {
+      alert(result.message);
+      fetchProducts(); // Recarrega a lista
+    } else {
+      alert(`Erro ao deletar produto: ${result.message}`);
+    }
+  } catch (error) {
+    console.error("Erro na requisição DELETE:", error);
+    alert("Falha na comunicação com o servidor ao deletar.");
+  }
+}
 
 // --- Funções Auxiliares (Mantidas) ---
 
@@ -67,7 +93,7 @@ function formatCurrency(value) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-// --- Funções de Renderização do Catálogo (Atualizada para remover products.find) ---
+// --- Funções de Renderização do Catálogo (Atualizada para usar 'products' vindo da API) ---
 
 function renderProducts() {
   productsListEl.innerHTML = "";
@@ -78,22 +104,24 @@ function renderProducts() {
       index * 0.1
     }s forwards`;
 
-    const isOutOfStock = product.stock === 0;
+    const isOutOfStock = product.estoque <= 0; // Usa 'estoque' do BD
     const buttonText = isOutOfStock ? "Esgotado" : "Adicionar ao Carrinho";
 
     const stockMessage =
-      product.stock < 5 && product.stock > 0
-        ? `<p class="stock-info">Apenas ${product.stock} em estoque!</p>`
+      product.estoque < 5 && product.estoque > 0
+        ? `<p class="stock-info">Apenas ${product.estoque} em estoque!</p>`
         : "";
 
     productCard.innerHTML = `
             <button class="remove-product-btn" data-id="${
               product.id
             }">×</button>
-            <img src="${product.image}" alt="${product.name}">
+            <img src="${product.imagem_url}" alt="${product.nome}">
             <div class="card-info">
-                <h3>${product.name}</h3>
-                <p class="product-price">${formatCurrency(product.price)}</p>
+                <h3>${product.nome}</h3>
+                <p class="product-price">${formatCurrency(
+                  parseFloat(product.preco)
+                )}</p>
                 ${stockMessage}
                 <button class="add-to-cart-btn" data-id="${product.id}" ${
       isOutOfStock ? "disabled" : ""
@@ -120,63 +148,43 @@ function handleAddProduct(e) {
   e.preventDefault();
 
   const name = document.getElementById("product-name").value;
-  const price = parseFloat(document.getElementById("product-price").value);
-  const stock = parseInt(document.getElementById("product-stock").value);
+  const price = document.getElementById("product-price").value; // Envia como string, PHP converte
+  const stock = document.getElementById("product-stock").value; // Envia como string
   const fileInput = document.getElementById("product-image-file");
 
-  // NOVO: Pega o arquivo de imagem selecionado
-  const file = fileInput.files[0];
+  // 1. Cria um objeto FormData
+  const formData = new FormData();
+  formData.append("nome", name);
+  formData.append("preco", price);
+  formData.append("estoque", stock);
 
-  if (!file) {
-    alert("Por favor, selecione uma imagem.");
+  // 2. Anexa o arquivo SE ele existir
+  if (fileInput.files.length > 0) {
+    // 'imagem_arquivo' é o nome que o PHP usará para acessar o arquivo (no $_FILES)
+    formData.append("imagem_arquivo", fileInput.files[0]);
+  } else {
+    alert("Por favor, selecione uma imagem para o produto.");
     return;
   }
 
-  // Cria uma URL de Objeto temporária para exibição da imagem
-  const tempImageUrl = URL.createObjectURL(file);
-
-  const newProduct = {
-    id: nextProductId++,
-    name: name,
-    price: price,
-    image: tempImageUrl, // Usa a URL temporária
-    stock: stock,
-  };
-
-  products.push(newProduct);
-  addProductForm.reset();
-
-  renderProducts();
-
-  alert(
-    `Produto "${name}" cadastrado com sucesso! \n(Lembre-se: A imagem só é visível enquanto a página estiver aberta).`
-  );
+  apiCreateProduct(formData);
 }
 
 function handleRemoveProductFromCatalog(e) {
   const productIdToRemove = parseInt(e.currentTarget.getAttribute("data-id"));
 
-  // Otimização: Libera a URL de objeto se for um produto criado pelo usuário
-  const removedProduct = products.find((p) => p.id === productIdToRemove);
-  if (removedProduct && removedProduct.image.startsWith("blob:")) {
-    URL.revokeObjectURL(removedProduct.image);
+  // Confirmação antes de deletar
+  if (confirm("Tem certeza que deseja remover este produto do catálogo?")) {
+    apiDeleteProduct(productIdToRemove);
+    // Não precisa manipular o array local, pois a API fará o fetch de novo
   }
-
-  products = products.filter((p) => p.id !== productIdToRemove);
-  cart = cart.filter((item) => item.id !== productIdToRemove);
-
-  renderProducts();
-  renderCart();
-
-  alert("Produto removido do catálogo.");
 }
 
-// --- Funções do Carrinho (Mantidas) ---
-
-// (renderCart, updateCartSummary, handleAddToCart, handleRemoveFromCart e handleCheckout permanecem os mesmos)
-// ... (Copie as funções do script.js anterior e cole aqui, ou use as mesmas)
+// --- Funções do Carrinho (Pequenas Modificações para usar 'estoque') ---
 
 function renderCart() {
+  // ... (Mantém a lógica de renderização do carrinho)
+  // ... (Certifique-se de que a lógica aqui seja copiada do seu script.js original)
   cartItemsEl.innerHTML = "";
 
   if (cart.length === 0) {
@@ -194,12 +202,16 @@ function renderCart() {
       }s forwards`;
 
       cartItemEl.innerHTML = `
-                <div class="cart-item-details">
-                    ${item.quantity}x <strong>${item.name}</strong>
-                </div>
-                <span>${formatCurrency(item.price * item.quantity)}</span>
-                <button class="remove-item-btn" data-id="${item.id}">×</button>
-            `;
+                        <div class="cart-item-details">
+                            ${item.quantity}x <strong>${item.name}</strong>
+                        </div>
+                        <span>${formatCurrency(
+                          item.price * item.quantity
+                        )}</span>
+                        <button class="remove-item-btn" data-id="${
+                          item.id
+                        }">×</button>
+                    `;
       cartItemsEl.appendChild(cartItemEl);
     });
 
@@ -225,9 +237,11 @@ function updateCartSummary() {
 
 function handleAddToCart(e) {
   const productId = parseInt(e.currentTarget.getAttribute("data-id"));
-  const product = products.find((p) => p.id === productId);
+  // Encontra o produto no array 'products' (que agora é do BD)
+  const product = products.find((p) => p.id == productId);
 
-  if (!product || product.stock === 0) {
+  if (!product || product.estoque <= 0) {
+    // Usa 'estoque' do BD
     alert("Produto esgotado!");
     return;
   }
@@ -239,13 +253,16 @@ function handleAddToCart(e) {
   } else {
     cart.push({
       id: product.id,
-      name: product.name,
-      price: product.price,
+      name: product.nome, // Usa 'nome' do BD
+      price: parseFloat(product.preco), // Converte para número
       quantity: 1,
     });
   }
 
-  product.stock--;
+  // AQUI: Diminuir estoque no banco de dados (PRÓXIMO PASSO)
+  // Por enquanto, diminuiremos só no Front-end para refletir a mudança
+  product.estoque--;
+
   renderProducts();
   renderCart();
 
@@ -258,7 +275,7 @@ function handleAddToCart(e) {
 function handleRemoveFromCart(e) {
   const itemId = parseInt(e.currentTarget.getAttribute("data-id"));
   const itemIndex = cart.findIndex((item) => item.id === itemId);
-  const product = products.find((p) => p.id === itemId);
+  const product = products.find((p) => p.id == itemId);
 
   if (itemIndex > -1) {
     cart[itemIndex].quantity--;
@@ -268,30 +285,72 @@ function handleRemoveFromCart(e) {
     }
   }
 
-  if (product) product.stock++;
+  if (product) product.estoque++; // Aumenta estoque no Front-end
 
   renderProducts();
   renderCart();
 }
 
-function handleCheckout() {
-  if (cart.length > 0) {
-    alert(
-      `Obrigado por sua compra! Total: ${cartTotalEl.textContent}. O pedido será enviado.`
-    );
+// ... (restante do código JS)
 
-    cart = [];
-
-    renderCart();
-  } else {
+async function handleCheckout() {
+  if (cart.length === 0) {
     alert("Seu carrinho está vazio. Adicione itens para finalizar a compra.");
+    return;
+  }
+
+  const subtotalValue = cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const totalValue = subtotalValue + SHIPPING_COST;
+
+  // 1. Monta o objeto de dados para o PHP
+  const checkoutData = {
+    cart: cart.map((item) => ({
+      id: item.id,
+      quantity: item.quantity,
+      price: item.price, // O PHP usará o preço do BD, mas enviamos para referência
+    })),
+    total: totalValue,
+    shipping: SHIPPING_COST,
+  };
+
+  try {
+    const response = await fetch(VENDAS_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(checkoutData),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      alert(
+        `Compra finalizada! Total: ${formatCurrency(
+          totalValue
+        )}. ID da Venda: ${result.venda_id}.`
+      );
+
+      // 2. Limpa o Front-end e recarrega os dados
+      cart = [];
+      renderCart();
+      await fetchProducts(); // Recarrega para ver o estoque atualizado
+    } else {
+      alert(`Erro ao finalizar a compra: ${result.message}`);
+    }
+  } catch (error) {
+    console.error("Erro no checkout:", error);
+    alert("Falha na comunicação com o servidor ao finalizar a compra.");
   }
 }
 
 // --- Inicialização ---
 
 function initStore() {
-  renderProducts();
+  fetchProducts(); // NOVO: Carrega os produtos da API ao invés do array local
   renderCart();
 
   checkoutButton.addEventListener("click", handleCheckout);
